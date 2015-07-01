@@ -55,6 +55,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
+        "time"
 )
 
 var cmdBulk = &Command{
@@ -78,7 +79,7 @@ Examples:
 
   force bulk batch retrieve [job id] [batch id]
 
-  force bulk query Account [SOQL]
+  force bulk query Account [SOQL] [csv output]
 
   force bulk query retrieve [job id] [batch id]
 `,
@@ -109,7 +110,7 @@ func runBulk(cmd *Command, args []string) {
 			if args[1] == "retrieve" {
 				ErrorAndExit("Query retrieve requires a job id and a batch id")
 			} else {
-				doBulkQuery(args[1], args[2], "CSV")
+				fmt.Println(string(doBulkQuery(args[1], args[2], "CSV")))
 			}
 		}
 	} else if len(args) == 4 {
@@ -125,13 +126,13 @@ func runBulk(cmd *Command, args []string) {
 			} else if args[1] == "status" {
 				DisplayBatchInfo(getBatchDetails(args[2], args[3]))
 			} else {
-				doBulkQuery(args[1], args[2], args[3])
+				fmt.Println(string(doBulkQuery(args[1], args[2], args[3])))
 			}
 		}
 	}
 }
 
-func doBulkQuery(objectType string, soql string, contenttype string) {
+func doBulkQuery(objectType string, soql string, contenttype string) []byte {
 	jobInfo, err := createBulkJob(objectType, "query", contenttype)
 	force, _ := ActiveForce()
 
@@ -140,10 +141,11 @@ func doBulkQuery(objectType string, soql string, contenttype string) {
 		closeBulkJob(jobInfo.Id)
 		ErrorAndExit(err.Error())
 	}
-	fmt.Println("Query Submitted")
-	fmt.Printf("To retrieve query status use\nforce bulk query status %s %s\n\n", jobInfo.Id, result.Id)
-	fmt.Printf("To retrieve query data use\nforce bulk query retrieve %s %s\n\n", jobInfo.Id, result.Id)
+
 	closeBulkJob(jobInfo.Id)
+	time.Sleep(10*time.Second)
+	bytes :=  getBulkQueryResults(jobInfo.Id, result.Id)
+	return bytes
 }
 
 func getBulkQueryResults(jobId string, batchId string) (data []byte) {
