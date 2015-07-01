@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ddollar/config"
+	"github.com/mhlo/config"
 	"os"
 	"path/filepath"
 	"strings"
