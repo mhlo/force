@@ -652,6 +652,7 @@ func (f *Force) Query(query string) (result ForceQueryResult, err error) {
 			nextUrl := fmt.Sprintf("%s%s", f.Credentials.InstanceUrl, nextResult.NextRecordsUrl)
 			nextBody, nextErr := f.httpGet(nextUrl)
 			if nextErr != nil {
+			   err = nextErr
 				return
 			}
 			json.Unmarshal(nextBody, &nextResult)

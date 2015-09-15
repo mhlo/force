@@ -1,6 +1,6 @@
 package main
 
-/* 
+/*
 
 bulk command
 force bulk insert mydata.csv
@@ -55,7 +55,8 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
-        "time"
+	"os"
+	"time"
 )
 
 var cmdBulk = &Command{
@@ -137,20 +138,30 @@ func doBulkQuery(objectType string, soql string, contenttype string) []byte {
 	force, _ := ActiveForce()
 
 	result, err := force.BulkQuery(soql, jobInfo.Id, contenttype)
+	fmt.Fprintln(os.Stderr, "bq: ", err, "result:", result, "job:", jobInfo)
 	if err != nil {
 		closeBulkJob(jobInfo.Id)
 		ErrorAndExit(err.Error())
 	}
 
 	closeBulkJob(jobInfo.Id)
-	time.Sleep(10*time.Second)
-	bytes :=  getBulkQueryResults(jobInfo.Id, result.Id)
+	var bytes []byte
+	for _, sleepTime := range []time.Duration{125 * time.Second, 40 * time.Second,
+		60 * time.Second, 45 * time.Second} {
+		time.Sleep(sleepTime)
+		bytes = getBulkQueryResults(jobInfo.Id, result.Id)
+		fmt.Fprintln(os.Stderr, "gbqr:", len(bytes))
+		if len(bytes) > 2 {
+			return bytes
+		}
+	}
 	return bytes
 }
 
 func getBulkQueryResults(jobId string, batchId string) (data []byte) {
 	resultIds := retrieveBulkQuery(jobId, batchId)
 	hasMultipleResultFiles := len(resultIds) > 1
+	fmt.Fprintln(os.Stderr, "gbqrSub:", resultIds)
 
 	for _, resultId := range resultIds {
 		//since this is going to stdOut, simply add header to separate "files"
@@ -161,6 +172,7 @@ func getBulkQueryResults(jobId string, batchId string) (data []byte) {
 		}
 		//get next file, and append
 		var newData []byte = retrieveBulkQueryResults(jobId, batchId, resultId)
+		fmt.Fprintln(os.Stderr, "rbqr return:", len(newData))
 		data = append(data[:], newData...)
 	}
 
